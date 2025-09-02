@@ -122,78 +122,98 @@ export class AutoFormatPlugin implements EditorPlugin {
         }
     }
 
-    private autoLink: Feature = {
-        enabled: !!(this.options.autoLink || this.options.autoTel || this.options.autoMailto),
-        transformFunction: (_model, previousSegment, paragraph, context) => {
-            const { autoLink, autoTel, autoMailto } = this.options;
-            const linkSegment = promoteLink(previousSegment, paragraph, {
-                autoLink,
-                autoTel,
-                autoMailto,
-            });
-
-            if (linkSegment) {
-                return createAnchor(linkSegment.link?.format.href || '', linkSegment.text);
-            }
-            return false;
-        },
-        apiName: 'autoLink',
-        changeSource: ChangeSource.AutoLink,
-    };
-
-    private tabFeatures: Feature[] = [
-        {
-            enabled: !!(this.options.autoBullet || this.options.autoNumbering),
-            transformFunction: (model, _previousSegment, paragraph, context) =>
-                keyboardListTrigger(
-                    model,
-                    paragraph,
-                    context,
-                    this.options.autoBullet,
-                    this.options.autoNumbering,
-                    this.options.removeListMargins
+    private _autoLinkFeature?: Feature;
+    private get autoLink(): Feature {
+        if (!this._autoLinkFeature) {
+            this._autoLinkFeature = {
+                enabled: !!(
+                    this.options.autoLink ||
+                    this.options.autoTel ||
+                    this.options.autoMailto
                 ),
-            apiName: 'autoToggleList',
-            changeSource: ChangeSource.AutoFormat,
-        },
-        this.autoLink,
-    ];
+                transformFunction: (_model, previousSegment, paragraph, context) => {
+                    const { autoLink, autoTel, autoMailto } = this.options;
+                    const linkSegment = promoteLink(previousSegment, paragraph, {
+                        autoLink,
+                        autoTel,
+                        autoMailto,
+                    });
 
-    private features: Feature[] = [
-        ...this.tabFeatures,
-        {
-            enabled: !!this.options.autoHyphen,
-            apiName: 'autoHyphen',
-            changeSource: ChangeSource.Format,
-            transformFunction: (_model, previousSegment, paragraph, context) =>
-                transformHyphen(previousSegment, paragraph, context),
-        },
-        {
-            enabled: !!this.options.autoFraction,
-            apiName: 'autoFraction',
-            changeSource: ChangeSource.Format,
-            transformFunction: (_model, previousSegment, paragraph, context) =>
-                transformFraction(previousSegment, paragraph, context),
-        },
-        {
-            enabled: !!this.options.autoOrdinals,
-            apiName: 'autoOrdinal',
-            changeSource: ChangeSource.Format,
-            transformFunction: (_model, previousSegment, paragraph, context) =>
-                transformOrdinals(previousSegment, paragraph, context),
-        },
-    ];
+                    if (linkSegment) {
+                        return createAnchor(linkSegment.link?.format.href || '', linkSegment.text);
+                    }
+                    return false;
+                },
+                apiName: 'autoLink',
+                changeSource: ChangeSource.AutoLink,
+            };
+        }
+        return this._autoLinkFeature;
+    }
 
-    private enterFeatures: Feature[] = [
-        {
-            enabled: !!this.options.autoHorizontalLine,
-            transformFunction: (model, _previousSegment, paragraph, context) =>
-                checkAndInsertHorizontalLine(model, paragraph, context),
-            apiName: 'autoHorizontalLine',
-            changeSource: ChangeSource.AutoFormat,
-        },
-        this.autoLink,
-    ];
+    private _tabFeatures?: Feature[];
+    private get tabFeatures(): Feature[] {
+        if (!this._tabFeatures) {
+            this._tabFeatures = [
+                {
+                    enabled: !!(this.options.autoBullet || this.options.autoNumbering),
+                    transformFunction: (model, _previousSegment, paragraph, context) =>
+                        keyboardListTrigger(
+                            model,
+                            paragraph,
+                            context,
+                            this.options.autoBullet,
+                            this.options.autoNumbering,
+                            this.options.removeListMargins
+                        ),
+                    apiName: 'autoToggleList',
+                    changeSource: ChangeSource.AutoFormat,
+                },
+                this.autoLink,
+            ];
+        }
+        return this._tabFeatures;
+    }
+
+    private get features(): Feature[] {
+        return [
+            ...this.tabFeatures,
+            {
+                enabled: !!this.options.autoHyphen,
+                apiName: 'autoHyphen',
+                changeSource: ChangeSource.Format,
+                transformFunction: (_model, previousSegment, paragraph, context) =>
+                    transformHyphen(previousSegment, paragraph, context),
+            },
+            {
+                enabled: !!this.options.autoFraction,
+                apiName: 'autoFraction',
+                changeSource: ChangeSource.Format,
+                transformFunction: (_model, previousSegment, paragraph, context) =>
+                    transformFraction(previousSegment, paragraph, context),
+            },
+            {
+                enabled: !!this.options.autoOrdinals,
+                apiName: 'autoOrdinal',
+                changeSource: ChangeSource.Format,
+                transformFunction: (_model, previousSegment, paragraph, context) =>
+                    transformOrdinals(previousSegment, paragraph, context),
+            },
+        ];
+    }
+
+    private get enterFeatures(): Feature[] {
+        return [
+            {
+                enabled: !!this.options.autoHorizontalLine,
+                transformFunction: (model, _previousSegment, paragraph, context) =>
+                    checkAndInsertHorizontalLine(model, paragraph, context),
+                apiName: 'autoHorizontalLine',
+                changeSource: ChangeSource.AutoFormat,
+            },
+            this.autoLink,
+        ];
+    }
 
     private handleKeyboardEvents(editor: IEditor, features: Feature[]): FormatContentModelOptions {
         const formatOptions: FormatContentModelOptions = {
