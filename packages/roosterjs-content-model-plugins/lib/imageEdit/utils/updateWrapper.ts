@@ -8,9 +8,9 @@ import { updateSideHandlesVisibility } from '../Resizer/updateSideHandlesVisibil
 import type { ImageEditOptions } from '../types/ImageEditOptions';
 import type { ImageMetadataFormat } from 'roosterjs-content-model-types';
 import {
+    getActualWrapperDimensions,
     getPx,
     isASmallImage,
-    isRTL,
     setFlipped,
     setSize,
     setWrapperSizeDimensions,
@@ -26,7 +26,9 @@ export function updateWrapper(
     clonedImage: HTMLImageElement,
     wrapper: HTMLSpanElement,
     resizers?: HTMLDivElement[],
-    croppers?: HTMLDivElement[]
+    croppers?: HTMLDivElement[],
+    isRTL?: boolean,
+    isRotating?: boolean
 ) {
     const {
         angleRad,
@@ -65,12 +67,12 @@ export function updateWrapper(
     wrapper.style.marginRight = `${marginHorizontal}px`;
 
     wrapper.style.transform = `rotate(${angleRad}rad)`;
-    setWrapperSizeDimensions(wrapper, image, visibleWidth, visibleHeight);
+    setWrapperSizeDimensions(wrapper, image, visibleWidth, visibleHeight, !!isRotating);
     wrapper.style.verticalAlign = 'text-bottom';
 
     // Update the text-alignment to avoid the image to overflow if the parent element have align center or right
     // or if the direction is Right To Left
-    if (isRTL(clonedImage)) {
+    if (isRTL) {
         wrapper.style.textAlign = 'right';
         if (!croppers) {
             clonedImage.style.left = getPx(cropLeftPx);
@@ -80,9 +82,12 @@ export function updateWrapper(
         wrapper.style.textAlign = 'left';
     }
 
-    // Update size of the image
-    clonedImage.style.width = getPx(originalWidth);
-    clonedImage.style.height = getPx(originalHeight);
+    if (!isRotating) {
+        // Update size of the image
+        clonedImage.style.width = getPx(originalWidth);
+        clonedImage.style.height = getPx(originalHeight);
+    }
+
     clonedImage.style.position = 'absolute';
 
     //Update flip direction
@@ -122,11 +127,18 @@ export function updateWrapper(
         }
     }
 
-    if (resizers) {
+    if (resizers && !isRotating) {
         const clientWidth = wrapper.clientWidth;
         const clientHeight = wrapper.clientHeight;
 
-        doubleCheckResize(editInfo, options.preserveRatio || false, clientWidth, clientHeight);
+        const actualDimensions = getActualWrapperDimensions(image, clientWidth, clientHeight);
+
+        doubleCheckResize(
+            editInfo,
+            options.preserveRatio || false,
+            actualDimensions.width,
+            actualDimensions.height
+        );
 
         const resizeHandles = filterInnerResizerHandles(resizers);
 
