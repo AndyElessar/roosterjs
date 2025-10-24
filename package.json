@@ -71,7 +71,7 @@
         "pretty-quick": "^2.0.1",
         "progress": "2.0.3",
         "rimraf": "3.0.2",
-        "rolldown": "^1.0.0-beta.34",
+        "rolldown": "latest",
         "sass": "^1.49.8",
         "sass-loader": "8.0.2",
         "toposort": "2.0.2",
