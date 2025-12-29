@@ -2,7 +2,7 @@
     "compilerOptions": {
         "strict": true,
         "jsx": "react",
-        "target": "es5",
+        "target": "es2024",
         "module": "commonjs",
         "outDir": "../dist",
         "sourceMap": true,
@@ -14,12 +14,15 @@
         "noUnusedLocals": true,
         "downlevelIteration": true,
         "importHelpers": true,
+        "forceConsistentCasingInFileNames": true,
+        "esModuleInterop": true,
+        "isolatedModules": true,
         "baseUrl": ".",
         "paths": {
             "*": ["*"]
         },
         "rootDir": ".",
-        "lib": ["es6", "dom"]
+        "lib": ["ES2024", "dom"]
     },
     "include": ["./*/lib/**/*.ts", "./*/lib/**/*.tsx"]
 }
