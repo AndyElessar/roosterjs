@@ -64,6 +64,7 @@ export { LegacyTableBorderFormat } from './contentModel/format/formatParts/Legac
 
 export { DatasetFormat, ReadonlyDatasetFormat } from './contentModel/format/metadata/DatasetFormat';
 export { TableMetadataFormat } from './contentModel/format/metadata/TableMetadataFormat';
+export { TableSpecialCellMetadataFormat } from './contentModel/format/metadata/TableSpecialCellMetadataFormat';
 export { ListMetadataFormat } from './contentModel/format/metadata/ListMetadataFormat';
 export {
     ImageResizeMetadataFormat,
@@ -96,6 +97,7 @@ export {
     TableAlignOperation,
     TableCellHorizontalAlignOperation,
     TableCellVerticalAlignOperation,
+    TableCellShiftOperation,
 } from './enum/TableOperation';
 export { PasteType } from './enum/PasteType';
 export { BorderOperations } from './enum/BorderOperations';
@@ -293,7 +295,7 @@ export {
     DomToModelDecoratorContext,
     DomToModelListFormat,
 } from './context/DomToModelFormatContext';
-export { ModelToDomContext } from './context/ModelToDomContext';
+export { ModelToDomContext, ModelToDomSegmentContext } from './context/ModelToDomContext';
 export {
     ModelToDomBlockAndSegmentNode,
     ModelToDomRegularSelection,
@@ -467,6 +469,7 @@ export { BasePluginEvent, BasePluginDomEvent } from './event/BasePluginEvent';
 export { BeforeAddUndoSnapshotEvent } from './event/BeforeAddUndoSnapshotEvent';
 export { BeforeCutCopyEvent } from './event/BeforeCutCopyEvent';
 export { BeforeDisposeEvent } from './event/BeforeDisposeEvent';
+export { BeforeDropEvent } from './event/BeforeDropEvent';
 export { BeforeKeyboardEditingEvent } from './event/BeforeKeyboardEditingEvent';
 export { BeforePasteEvent, MergePastedContentFunc } from './event/BeforePasteEvent';
 export { BeforeSetContentEvent } from './event/BeforeSetContentEvent';
