@@ -62,6 +62,7 @@ const initialState: OptionState = {
     },
     markdownPasteOptions: {
         autoConversion: false,
+        undoConversion: false,
     },
     editPluginOptions: {
         handleTabKey: {
@@ -74,7 +75,10 @@ const initialState: OptionState = {
     },
     customReplacements: emojiReplacements,
     disableSideResize: false,
-    experimentalFeatures: new Set<ExperimentalFeature>(['TransformTableBorderColors']),
+    experimentalFeatures: new Set<ExperimentalFeature>([
+        'TransformTableBorderColors',
+        'HandleDropInternalContent',
+    ]),
 };
 
 export class EditorOptionsPlugin extends SidePanePluginImpl<OptionsPane, OptionPaneProps> {

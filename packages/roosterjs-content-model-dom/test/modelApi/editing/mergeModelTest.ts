@@ -126,6 +126,134 @@ describe('mergeModel', () => {
         });
     });
 
+    it('adds merged content right after a list as the last list item', () => {
+        const majorModel = createContentModelDocument();
+        const sourceModel = createContentModelDocument();
+        const listItem = createListItem([createListLevel('OL')]);
+        const listParagraph = createParagraph();
+        const paragraphAfterList = createParagraph();
+        const marker = createSelectionMarker();
+        const sourceParagraph = createParagraph();
+        const sourceText = createText('new item');
+        const nextListItem = createListItem([createListLevel('OL')]);
+        const nextListParagraph = createParagraph();
+
+        listParagraph.segments.push(createText('existing item'));
+        listItem.blocks.push(listParagraph);
+        paragraphAfterList.segments.push(marker);
+        nextListParagraph.segments.push(createText('next item'));
+        nextListItem.blocks.push(nextListParagraph);
+        majorModel.blocks.push(listItem, paragraphAfterList, nextListItem);
+        sourceParagraph.segments.push(sourceText);
+        sourceModel.blocks.push(sourceParagraph);
+
+        const result = mergeModel(
+            majorModel,
+            sourceModel,
+            { newEntities: [], deletedEntities: [], newImages: [] },
+            {
+                insertPosition: {
+                    marker,
+                    paragraph: paragraphAfterList,
+                    path: [majorModel],
+                },
+                mergeParagraphAfterList: true,
+            }
+        );
+
+        const newListItem = majorModel.blocks[1] as ContentModelListItem;
+
+        expect(newListItem.blockGroupType).toBe('ListItem');
+        expect(newListItem.levels).toEqual(listItem.levels);
+        expect(newListItem.blocks).toEqual([paragraphAfterList]);
+        expect(paragraphAfterList.segments).toEqual([sourceText, marker]);
+        expect(majorModel.blocks[2]).toEqual({
+            blockType: 'Paragraph',
+            segments: [
+                {
+                    segmentType: 'Br',
+                    format: {},
+                },
+            ],
+            format: {},
+        });
+        expect(majorModel.blocks[3]).toBe(nextListItem);
+        expect(result?.path).toEqual([newListItem, majorModel]);
+    });
+
+    it('keeps merged content outside a list when mergeParagraphAfterList is not enabled', () => {
+        const majorModel = createContentModelDocument();
+        const sourceModel = createContentModelDocument();
+        const listItem = createListItem([createListLevel('OL')]);
+        const paragraphAfterList = createParagraph();
+        const marker = createSelectionMarker();
+        const sourceParagraph = createParagraph();
+        const sourceText = createText('new text');
+
+        const listParagraph = createParagraph();
+
+        listParagraph.segments.push(createText('existing item'));
+        listItem.blocks.push(listParagraph);
+        paragraphAfterList.segments.push(marker);
+        majorModel.blocks.push(listItem, paragraphAfterList);
+        sourceParagraph.segments.push(sourceText);
+        sourceModel.blocks.push(sourceParagraph);
+
+        const result = mergeModel(
+            majorModel,
+            sourceModel,
+            { newEntities: [], deletedEntities: [], newImages: [] },
+            {
+                insertPosition: {
+                    marker,
+                    paragraph: paragraphAfterList,
+                    path: [majorModel],
+                },
+            }
+        );
+
+        expect(majorModel.blocks).toEqual([listItem, paragraphAfterList]);
+        expect(paragraphAfterList.segments).toEqual([sourceText, marker]);
+        expect(result?.path).toEqual([majorModel]);
+    });
+
+    it('keeps merged content outside a list when the line after the list is not empty', () => {
+        const majorModel = createContentModelDocument();
+        const sourceModel = createContentModelDocument();
+        const listItem = createListItem([createListLevel('OL')]);
+        const listParagraph = createParagraph();
+        const paragraphAfterList = createParagraph();
+        const existingText = createText('existing text');
+        const marker = createSelectionMarker();
+        const sourceParagraph = createParagraph();
+        const sourceText = createText('new text');
+
+        listParagraph.segments.push(createText('existing item'));
+        listItem.blocks.push(listParagraph);
+        paragraphAfterList.segments.push(existingText, marker);
+        majorModel.blocks.push(listItem, paragraphAfterList);
+        sourceParagraph.segments.push(sourceText);
+        sourceModel.blocks.push(sourceParagraph);
+
+        const result = mergeModel(
+            majorModel,
+            sourceModel,
+            { newEntities: [], deletedEntities: [], newImages: [] },
+            {
+                insertPosition: {
+                    marker,
+                    paragraph: paragraphAfterList,
+                    path: [majorModel],
+                },
+                mergeParagraphAfterList: true,
+            }
+        );
+
+        expect(majorModel.blocks).toEqual([listItem, paragraphAfterList]);
+        expect(paragraphAfterList.segments).toEqual([existingText, sourceText, marker]);
+        expect(result?.path).toEqual([majorModel]);
+    });
+
     it('para to para with text selection, with format', () => {
         const majorModel = createContentModelDocument();
         const sourceModel = createContentModelDocument();
@@ -6474,6 +6602,80 @@ describe('mergeModel', () => {
         expect(table.rows[1].cells[2]).toEqual(newCell01);
         expect(table.rows[1].cells[3]).toEqual(newCell02);
         expect(table.rows[1].cells[4]).toEqual(newCell03);
+
+        expect(normalizeTable.normalizeTable).toHaveBeenCalledTimes(1);
+    });
+
+    it('table to table, merge source table with spanAbove cells - should reset spanAbove on merged cells', () => {
+        const majorModel = createContentModelDocument();
+        const sourceModel = createContentModelDocument();
+
+        // Create a simple 2x2 target table with selection in cell [0,0]
+        const para1 = createParagraph();
+        const text1 = createText('test1');
+        const cell00 = createTableCell(false, false, false, { backgroundColor: '00' });
+        const cell01 = createTableCell(false, false, false, { backgroundColor: '01' });
+        const cell10 = createTableCell(false, false, false, { backgroundColor: '10' });
+        const cell11 = createTableCell(false, false, false, { backgroundColor: '11' });
+        const table1 = createTable(2);
+
+        para1.segments.push(text1);
+        text1.isSelected = true;
+        cell00.blocks.push(para1);
+        table1.rows = [
+            { format: {}, height: 0, cells: [cell00, cell01] },
+            { format: {}, height: 0, cells: [cell10, cell11] },
+        ];
+
+        majorModel.blocks.push(table1);
+
+        // Source table is 2x2 where the second row cells are vertically merged (spanAbove)
+        const newPara1 = createParagraph();
+        const newText1 = createText('newText1');
+        const newCell00 = createTableCell(false, false, false, { backgroundColor: 'n00' });
+        const newCell01 = createTableCell(false, false, false, { backgroundColor: 'n01' });
+        const newCell10 = createTableCell(false, true, false, { backgroundColor: 'n10' }); // spanAbove
+        const newCell11 = createTableCell(false, true, false, { backgroundColor: 'n11' }); // spanAbove
+        const newTable1 = createTable(2);
+
+        newPara1.segments.push(newText1);
+        newCell00.blocks.push(newPara1);
+        newTable1.rows = [
+            { format: {}, height: 0, cells: [newCell00, newCell01] },
+            { format: {}, height: 0, cells: [newCell10, newCell11] },
+        ];
+
+        sourceModel.blocks.push(newTable1);
+
+        spyOn(applyTableFormat, 'applyTableFormat');
+        spyOn(normalizeTable, 'normalizeTable');
+
+        mergeModel(
+            majorModel,
+            sourceModel,
+            { newEntities: [], deletedEntities: [], newImages: [] },
+            {
+                mergeTable: true,
+            }
+        );
+
+        const table = majorModel.blocks[0] as ContentModelTable;
+
+        // Target stays 2x2, all source cells are placed one-to-one
+        expect(table.rows.length).toEqual(2);
+        expect(table.rows[0].cells.length).toEqual(2);
+
+        expect(table.rows[0].cells[0]).toBe(newCell00);
+        expect(table.rows[0].cells[1]).toBe(newCell01);
+        expect(table.rows[1].cells[0]).toBe(newCell10);
+        expect(table.rows[1].cells[1]).toBe(newCell11);
+
+        // The spanAbove flag from the source table must be reset so the merged cells
+        // become standalone cells instead of continuations of a vertical merge
+        expect(newCell10.spanAbove).toBe(false);
+        expect(newCell11.spanAbove).toBe(false);
+        expect(newCell00.spanAbove).toBe(false);
+        expect(newCell01.spanAbove).toBe(false);
 
         expect(normalizeTable.normalizeTable).toHaveBeenCalledTimes(1);
     });
